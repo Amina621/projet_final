@@ -4,28 +4,29 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import connectDB from "./configs/db.js";
-import { clerkMiddleware } from '@clerk/express'
+import { clerkMiddleware } from "@clerk/express";
 import clerkWebhooks from "./controllers/clerkWebhooks.js";
 
-// ✅ Vérification temporaire de la variable MONGO_URI
+// Vérifier la variable d'environnement
 console.log("🧪 MONGO_URI:", process.env.MONGO_URI);
 
-// ✅ Démarrage asynchrone
 const startServer = async () => {
   try {
     await connectDB(); // Connexion MongoDB
 
     const app = express();
     app.use(cors());
+
+    // ✅ Webhook Clerk — doit être AVANT express.json()
+    app.post("/webhook", express.raw({ type: "application/json" }), clerkWebhooks);
+
+    // ✅ Ensuite seulement, middleware JSON
     app.use(express.json());
 
+    // ✅ Middleware Clerk (auth, etc.)
+    app.use(clerkMiddleware());
 
-    app.use(express.json())
-    app.use(clerkMiddleware())
-
-    //api to listen to clerk webhooks
-    app.use("/api/clerk",clerkWebhooks);
-
+    // ✅ Test route
     app.get("/", (req, res) => {
       res.send("🚀 API is working");
     });
